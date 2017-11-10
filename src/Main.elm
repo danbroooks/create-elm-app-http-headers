@@ -1,19 +1,21 @@
 module Main exposing (..)
 
-import Html exposing (Html, text, div, img)
-import Html.Attributes exposing (src)
+import Html exposing (..)
+import Html.Events exposing (..)
+import Http exposing (..)
+import Json.Decode as Json
 
 
 ---- MODEL ----
 
 
 type alias Model =
-    {}
+    { token : String }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( {}, Cmd.none )
+    ( { token = "token" }, Cmd.none )
 
 
 
@@ -22,11 +24,35 @@ init =
 
 type Msg
     = NoOp
+    | AuthRequest
+    | AuthAttempt (Result Http.Error Json.Value)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        AuthRequest ->
+            model ! [ Http.send AuthAttempt <| basicAuthRequest "/api" Json.value model.token ]
+
+        _ ->
+            model ! []
+
+
+basicAuthRequest : String -> Json.Decoder a -> String -> Http.Request a
+basicAuthRequest url decoder token =
+    let
+        authorization =
+            "Bearer " ++ token
+    in
+        Http.request
+            { method = "GET"
+            , headers = [ (Http.header "Authorization" authorization) ]
+            , url = url
+            , body = emptyBody
+            , expect = expectJson decoder
+            , timeout = Nothing
+            , withCredentials = False
+            }
 
 
 
@@ -36,8 +62,7 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ img [ src "/logo.svg" ] []
-        , div [] [ text "Your Elm App is working!" ]
+        [ button [ onClick AuthRequest ] [ text "click" ]
         ]
 
 
